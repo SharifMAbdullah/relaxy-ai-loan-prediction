@@ -133,3 +133,6 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+# Ignore generatable files and dirs
+src/artifacts
+src/catboost_info
