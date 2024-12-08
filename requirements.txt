@@ -26,3 +26,5 @@ zipp==3.20.2
 seaborn==0.11.2
 catboost
 mlflow==1.26.0
+protobuf==3.20
+setuptools

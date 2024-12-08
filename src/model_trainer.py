@@ -1,3 +1,4 @@
+import mlflow
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split, StratifiedKFold
@@ -9,7 +10,7 @@ from typing import Dict, Any, Tuple
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import (RandomForestClassifier, AdaBoostClassifier, 
+from sklearn.ensemble import (HistGradientBoostingClassifier, RandomForestClassifier, AdaBoostClassifier, 
                             ExtraTreesClassifier)
 from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
@@ -35,7 +36,8 @@ class ModelTrainer:
             "Naive Bayes": GaussianNB(),
             "MLP": MLPClassifier(),
             "AdaBoost": AdaBoostClassifier(),
-            "Extra Trees": ExtraTreesClassifier()
+            "Extra Trees": ExtraTreesClassifier(),
+            "HistogramBoost": HistGradientBoostingClassifier()
         }
     
     def create_directories(self):
@@ -88,7 +90,7 @@ class ModelTrainer:
             raise e
     
     def initiate_model_training(self) -> Dict[str, Dict]:
-        """Train and evaluate all models"""
+        """Train and evaluate all models with separate MLflow runs"""
         try:
             # Create directories
             self.create_directories()
@@ -102,22 +104,51 @@ class ModelTrainer:
             )
             
             results = {}
+            
             for model_name, model in self.models.items():
                 print(f"Training and evaluating {model_name}...")
-                metrics = self.evaluate_model(model, X_train, y_train, X_test, y_test)
-                results[model_name] = metrics
+                
+                # Start a new MLflow run for each model
+                with mlflow.start_run(run_name=model_name):
+                    # Log model parameters (if applicable)
+                    if hasattr(model, 'get_params'):
+                        mlflow.log_params(model.get_params())
+                    
+                    # Evaluate the model
+                    metrics = self.evaluate_model(model, X_train, y_train, X_test, y_test)
+                    
+                    # Log metrics to MLflow
+                    for metric_name, metric_value in metrics.items():
+                        if metric_name != 'Confusion Matrix':  # Log scalar metrics
+                            mlflow.log_metric(metric_name, metric_value)
+                    
+                    # Save confusion matrix as an artifact
+                    cm = metrics['Confusion Matrix']
+                    cm_file = os.path.join(self.model_dir, f"{model_name}_confusion_matrix.txt")
+                    with open(cm_file, 'w') as f:
+                        f.write(str(cm))
+                    mlflow.log_artifact(cm_file)
+                    
+                    # Log the model
+                    mlflow.sklearn.log_model(model, artifact_path="model")
+                    
+                    # Save metrics locally
+                    results[model_name] = metrics
             
-            # Save all models and their metrics
+            # Save all models and their metrics locally
             self.save_models(results)
             
             print("Model training completed successfully")
             return results
-            
+        
         except Exception as e:
             print(f"Error in model training: {str(e)}")
             raise e
 
+
 if __name__ == "__main__":
+    mlflow.set_experiment("LoanPredict")
+    mlflow.set_tracking_uri(uri="http://127.0.0.1:5050/")
     model_trainer = ModelTrainer()
     results = model_trainer.initiate_model_training()
     
