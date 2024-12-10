@@ -1,111 +1,113 @@
-# AI Engineer Technical Assessment - Relaxy
+# Project Setup and Guide
 
-![image](https://github.com/user-attachments/assets/3d76f564-458a-4118-b9d1-7d9826cd8652)
+## Initial Setup
 
+**Create a Virtual Environment, activate it, and install requirements**
 
-Dear Candidate,
-
-Welcome to the hands-on technical assessment for the AI Engineer position at Relaxy! We're excited to evaluate your MLOps and engineering capabilities through this practical examination.
-
-In this assessment, you'll be working with our Loan Approval prediction system, a real-world ML pipeline that demonstrates many of the challenges you'll tackle at Relaxy. We've designed this assessment to evaluate not just your coding abilities, but also your understanding of MLOps best practices, system design, and production considerations.
-
-You'll be working on implementing critical production features that would help scale and monitor our ML systems. Take your time to understand the existing codebase before diving into the tasks. Remember, we value clean, maintainable code with proper documentation over quick implementations.
-
-## Getting Started with the Codebase
-```mermaid
-graph TD;
-    A[Loan Approval Model] --> B[requirements.txt]
-    A --> C[.gitignore]
-    A --> D[src]
-    D --> E[main.py]
-    D --> F[data_ingestion]
-    D --> G[data_transformation]
-    D --> H[model_trainer]
-    A --> I[artifacts]
-    I --> J[ingested_data]
-    I --> K[transformed_data]
-    I --> L[models]
-    A --> M[logs]
+```
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cd src
+python src/main.py
 ```
 
-### Context
-The Loan Approval Model codebase represents a production-grade ML pipeline that handles loan approval predictions. The system includes modular components for data ingestion, transformation, and model training, built with scalability and maintainability in mind. This foundation provides an excellent starting point for implementing advanced MLOps capabilities.
+Initial run reveals Random Forest as the best model with an F1 score of 0.9991.
 
-### Initial Setup Instructions
+## Steps and Features
 
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/relaxy-intel/relaxy-ai-engineer-exam-question.git
-   cd Loan-Approval-Model
-   ```
+### 1. Exploratory Data Analysis (EDA)
 
-2. **Create and Activate Virtual Environment**
-   ```bash
-   python -m venv venv
-   
-   # Activate the venv
-   source venv/bin/activate
-   ```
+- Added an EDA code to discover more about the data.
+- Findings can be reviewed in the EDA file.
 
-3. **Install Dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 2. Experimenting with Models
 
-4. **Prepare Dataset**
-   - Place the provided `loan_approval_dataset.csv` in the `dataset` directory
-   - Ensure the file permissions are correctly set
+- I tested boosting algorithms but they did not outperform Random Forest.
+  Random Forest which is an ensemble method, provided the best results.
+  This was better than any other ensemble methods such as HistogramBoost
 
-5. **Run the Base Pipeline**
-   ```bash
-   python src/main.py
-   ```
+### 3. MLFlow Integration
 
-6. **Verify Setup**
-   - Check `logs` directory for execution logs
-   - Examine `artifacts` directory for pipeline outputs
-   - Verify model training completion
+- MLFlow has been set up in the codebase to track and compare model performance.
+  To view model metrics in MLFlow UI when using Docker, follow these steps:
 
-### Pipeline Exploration Tips
+`docker container ls`
 
-1. **Code Structure Review**
-   - Examine the modular architecture
-   - Understand component interactions
-   - Review configuration management
-   - Study error handling implementation
+- Find the container named relaxy-ai-engineer-exam-question_relaxy-exam and use the container ID.
 
-2. **Output Analysis**
-   - Review logging patterns
-   - Examine generated artifacts
-   - Check model performance metrics
-   - Analyze data transformation steps
+```
+docker exec -it [CONTAINER ID] sh
+mlflow ui --host 0.0.0.0
+```
 
-3. **Experimentation Ideas**
-   - Try different model parameters
-   - Test with various data samples
-   - Modify transformation logic
-   - Add new validation steps
+To run locally (without Docker), simply execute the following command in shell:
 
-4. **Debugging Support**
-   - Use logging information
-   - Check error messages
-   - Review execution flow
-   - Monitor resource usage
+mlflow ui
 
-Remember: Take time to understand the existing implementation before starting your tasks. This will help you make better design decisions for your enhancements.
+### 4. Setting Up EC2
 
-## Ready to Begin?
+- Followed the standard procedure to create an EC2 instance on AWS.
+- Current setup supports local pipeline execution. To run on EC2:
+  Modify the docker-compose file:
 
-Once you're comfortable with the codebase:
-1. Review the assessment tasks thoroughly
-2. Plan your implementation approach
-3. Create a new branch for your work
-4. Document your design decisions
-5. Implement your solutions
-6. Test thoroughly before submission
+```
+services:
+  relaxy-exam:
+    build:
+      context: .
+      dockerfile: Dockerfile
+```
 
-If you have any questions about the setup or requirements, please don't hesitate to ask. Good luck with your assessment!
+To:
 
-Best regards,
+```
+services:
+  relaxy-exam:
+    build:
+      image: docker.io/ayhay/relaxy-exam
+```
 
-The Relaxy Engineering Team
+### 6. Using the Docker Image and running the pipeline
+
+- Build and push your own image if you needed to make any changes to the code:
+
+```
+docker build
+docker push
+```
+
+- I have already pushed the docker image into docker-hub so you can pull it using
+  `docker pull docker.io/ayhay/relaxy-exam`
+- You can either connect to the EC2 instance shell or your local shell if you are testing locally and run:
+  `docker compose up -d`
+- The docker-compose file has already set up prometheus for metrics tracking and alert notification if something goes wrong,
+  and it also supports using the existing image, so nothing else needs to be done.
+
+### 7. Testing the Endpoints
+
+- After setting up the project using docker-compose, you can test the endpoints:
+
+```
+Local Testing
+    URL: http://127.0.0.1:8080
+
+Testing on EC2
+    Replace the 127.0.0.1 part with the AWS-provided public IP or domain.
+```
+
+- Implemented Endpoints
+
+```
+    /metrics (GET)
+    Returns Prometheus metrics logs for analyzing:
+        - Infrastructure details
+        - CPU usage
+        - Event counters, etc.
+
+    /health (GET)
+    - Checks if the best-performing model is active and available.
+
+    /predict (POST)
+    - Predicts whether a user will get a loan based on input data.
+```
