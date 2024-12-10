@@ -1,0 +1,11 @@
+groups:
+  - name: flask_alerts
+    rules:
+      - alert: HighPredictionLatency
+        expr: histogram_quantile(0.95, rate(prediction_latency_seconds_bucket[1m])) > 0.5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High prediction latency detected"
+          description: "Prediction latency > 0.5s (95th percentile) for the last minute."

@@ -13,14 +13,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY ./src ./src
+COPY . .
 
-WORKDIR /app/src
-# Expose the port for MLflow tracking
-#EXPOSE 5000
+WORKDIR /app
 
 # Expose the application port
-# EXPOSE 8080
+EXPOSE 8080
 
 # Define entry point (adjust to your needs)
-CMD ["python", "main.py"]
+CMD ["python", "app.py"]

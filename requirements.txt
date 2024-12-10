@@ -28,3 +28,4 @@ catboost
 mlflow==1.26.0
 protobuf==3.20
 setuptools
+prometheus_client
